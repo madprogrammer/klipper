@@ -347,6 +347,12 @@ class BedMeshCalibrate:
         self.gcode.register_command(
             'BED_MESH_CALIBRATE', self.cmd_BED_MESH_CALIBRATE,
             desc=self.cmd_BED_MESH_CALIBRATE_help)
+        # Save z offset temporarily and apply to bed mesh
+        self.probed_z_offset = 0
+        self.apply_to_bed_mesh = False
+        self.gcode.register_command(
+            'SAVE_Z_OFFSET_TO_BED_MESH',
+            self.cmd_SAVE_Z_OFFSET_TO_BED_MESH)
     def print_generated_points(self, print_func, truncate=False):
         x_offset = y_offset = 0.
         probe = self.printer.lookup_object('probe', None)
@@ -651,6 +657,11 @@ class BedMeshCalibrate:
         except BedMeshError as e:
             raise gcmd.error(str(e))
         self.probe_mgr.start_probe(gcmd)
+
+    def cmd_SAVE_Z_OFFSET_TO_BED_MESH(self, gcmd):
+        self.probed_z_offset = self.printer.lookup_object('probe').last_z_result
+        self.apply_to_bed_mesh = gcmd.get('APPLY', True)
+    
     def probe_finalize(self, offsets, positions):
         z_offset = offsets[2]
         positions = [[round(p[0], 2), round(p[1], 2), p[2]]
@@ -773,6 +784,11 @@ class BedMeshCalibrate:
 
         z_mesh = ZMesh(params, self._profile_name)
         try:
+            if self.apply_to_bed_mesh:
+                for row in range(len(probed_matrix)):
+                    for col in range(len(probed_matrix[row])):
+                        probed_matrix[row][col] -= self.probed_z_offset
+                self.apply_to_bed_mesh = False
             z_mesh.build_mesh(probed_matrix)
         except BedMeshError as e:
             raise self.gcode.error(str(e))

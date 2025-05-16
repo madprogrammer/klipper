@@ -12,22 +12,28 @@ If the probe did not move far enough to trigger, then
 consider reducing the Z axis minimum position so the probe
 can travel further (the Z minimum position can be negative).
 """
+_NERVER = 9999999
 
 # Calculate the average Z from a set of positions
 def calc_probe_z_average(positions, method='average'):
-    if method != 'median':
-        # Use mean average
-        count = float(len(positions))
-        return [sum([pos[i] for pos in positions]) / count
-                for i in range(3)]
-    # Use median
-    z_sorted = sorted(positions, key=(lambda p: p[2]))
-    middle = len(positions) // 2
-    if (len(positions) & 1) == 1:
-        # odd number of samples
-        return z_sorted[middle]
-    # even number of samples
-    return calc_probe_z_average(z_sorted[middle-1:middle+1], 'average')
+    if method == 'median':
+        # Use median
+        z_sorted = sorted(positions, key=(lambda p: p[2]))
+        middle = len(positions) // 2
+        if (len(positions) & 1) == 1:
+            # odd number of samples
+            return z_sorted[middle]
+        # even number of samples
+        return calc_probe_z_average(z_sorted[middle-1:middle+1], 'average')
+    if method == 'submaxmin':
+        z_sorted = sorted(positions, key=(lambda p: p[2]))
+        if len(positions) >= 3:
+            z_sorted = z_sorted[1:-1]
+        return calc_probe_z_average(z_sorted, 'average')
+    # Use mean average
+    count = float(len(positions))
+    return [sum([pos[i] for pos in positions]) / count
+            for i in range(3)]
 
 
 ######################################################################
@@ -63,9 +69,13 @@ class ProbeCommandHelper:
     def _move(self, coord, speed):
         self.printer.lookup_object('toolhead').manual_move(coord, speed)
     def get_status(self, eventtime):
+        x_offset, y_offset, z_offset = self.probe.get_offsets()
         return {'name': self.name,
                 'last_query': self.last_state,
-                'last_z_result': self.last_z_result}
+                'last_z_result': self.last_z_result,
+                'x_offset': x_offset,
+                'y_offset': y_offset,
+                'z_offset': z_offset}
     cmd_QUERY_PROBE_help = "Return the status of the z-probe"
     def cmd_QUERY_PROBE(self, gcmd):
         if self.query_endstop is None:
@@ -277,13 +287,16 @@ class ProbeParameterHelper:
         self.sample_count = config.getint('samples', 1, minval=1)
         self.sample_retract_dist = config.getfloat('sample_retract_dist', 2.,
                                                    above=0.)
-        atypes = ['median', 'average']
+        atypes = ['median', 'average', 'submaxmin']
         self.samples_result = config.getchoice('samples_result', atypes,
                                                'average')
         self.samples_tolerance = config.getfloat('samples_tolerance', 0.100,
                                                  minval=0.)
         self.samples_retries = config.getint('samples_tolerance_retries', 0,
                                              minval=0)
+        # vibrate
+        self.vibrate = config.getint('vibrate', _NERVER)
+        self.probe_count = 0
     def get_probe_params(self, gcmd=None):
         if gcmd is None:
             gcmd = self.dummy_gcode_cmd
@@ -368,6 +381,9 @@ class ProbeSessionHelper:
         retries = 0
         positions = []
         sample_count = params['samples']
+        last_probe_failed = False
+        start_z = toolhead.get_position()[2]
+        gcode = self.printer.lookup_object('gcode')
         while len(positions) < sample_count:
             # Probe position
             pos = self._probe(gcmd)
@@ -376,8 +392,18 @@ class ProbeSessionHelper:
             z_positions = [p[2] for p in positions]
             if max(z_positions)-min(z_positions) > params['samples_tolerance']:
                 if retries >= params['samples_tolerance_retries']:
-                    raise gcmd.error("Probe samples exceed samples_tolerance")
+                    # raise gcmd.error("Probe samples exceed samples_tolerance")
+                    toolhead.manual_move(probexy + [start_z], params['lift_speed'])
+                    commands = [
+                            'Z_VIBRATE',
+                            'G4 P500',
+                    ]
+                    gcode._process_commands(commands, False)
+                    retries=0
+                    positions = []
                 gcmd.respond_info("Probe samples exceed tolerance. Retrying...")
+                last_probe_failed = True
+                self.param_helper.probe_count += 1
                 retries += 1
                 positions = []
             # Retract
@@ -385,6 +411,18 @@ class ProbeSessionHelper:
                 toolhead.manual_move(
                     probexy + [pos[2] + params['sample_retract_dist']],
                     params['lift_speed'])
+                if last_probe_failed:
+                    if self.param_helper.probe_count != 0 and self.param_helper.probe_count % self.param_helper.vibrate == 0:
+                        gcode.respond_info('Probe ' + str(self.param_helper.probe_count) + " times, start vibrating")
+                        commands = [
+                            'G91',
+                            'G1 Z20 F300',
+                            'G90',
+                            'G1 Z10 F300',
+                            'Z_VIBRATE'
+                        ]
+                        gcode._process_commands(commands, False)
+                    last_probe_failed = False
         # Calculate result
         epos = calc_probe_z_average(positions, params['samples_result'])
         self.results.append(epos)
@@ -483,6 +521,7 @@ class ProbePointsHelper:
             raise gcmd.error("horizontal_move_z can't be less than"
                              " probe's z_offset")
         probe_session = probe.start_probe_session(gcmd)
+        probe.param_helper.probe_count = 0
         probe_num = 0
         while 1:
             self._raise_tool(not probe_num)
@@ -494,7 +533,18 @@ class ProbePointsHelper:
                 # Caller wants a "retry" - restart probing
                 probe_num = 0
             self._move_next(probe_num)
+            if self.gcode.break_flag:
+                break
             probe_session.run_probe(gcmd)
+            probe.param_helper.probe_count += 1
+            gcode = self.printer.lookup_object('gcode')
+            if probe.param_helper.vibrate and probe.param_helper.probe_count % probe.param_helper.vibrate == 0:
+                commands = [
+                    'G90',
+                    'G1 Z'+ str(self.horizontal_move_z) + ' F300',
+                    'Z_VIBRATE'
+                ]
+                gcode._process_commands(commands, False)
             probe_num += 1
         probe_session.end_probe_session()
     def _manual_probe_start(self):

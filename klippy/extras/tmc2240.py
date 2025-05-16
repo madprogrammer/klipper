@@ -411,5 +411,6 @@ class TMC2240:
         #   DRV_CONF
         set_config_field(config, "slope_control", 0)
 
+        set_config_field(config, "overtempprewarning_vth", 3155)
 def load_config_prefix(config):
     return TMC2240(config)

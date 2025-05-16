@@ -5,6 +5,7 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import math, logging, collections
 import chelper
+from extras.homing import Homing
 
 class error(Exception):
     pass
@@ -328,6 +329,8 @@ class GenericPrinterRail:
         self.endstops = []
         self.endstop_map = {}
         self.endstop_pin = config.get('endstop_pin')
+        self.endstops_reverse = []
+        self.endstop_map_reverse = {}
         # Primary endstop position
         self.query_endstops = self.printer.load_object(config, 'query_endstops')
         mcu_endstop = self.lookup_endstop(self.endstop_pin, self.name)
@@ -379,6 +382,18 @@ class GenericPrinterRail:
             raise config.error(
                 "Invalid homing_positive_dir / position_endstop in '%s'"
                 % (config.get_name(),))
+        # Reverse homing
+        if self.get_name() == "stepper_z":
+            if config.get('endstop_pin_reverse', None):
+                self.reversed = False
+                self.position_endstop_reverse = config.getfloat("position_endstop_reverse")
+                self.homing_positive_dir_reverse = config.getboolean('homing_positive_dir_reverse')
+                self.homing_speed_reverse = config.getfloat('homing_speed_reverse', self.homing_speed, above=0.)
+                self.homing_retract_dist_reverse = 0
+                self.gcode = self.printer.lookup_object('gcode')
+                self.printer.register_event_handler("klippy:ready", self.handle_ready)
+                self.printer.register_event_handler("homing:home_rails_end", self.handle_reverse_home_rails_end)
+
     def get_name(self, short=False):
         if short:
             if self.name.startswith('stepper'):
@@ -438,7 +453,66 @@ class GenericPrinterRail:
         mcu_endstop.add_stepper(stepper)
     def add_stepper_from_config(self, config):
         stepper = PrinterStepper(config, self.stepper_units_in_radians)
-        self.add_stepper(stepper, config.get('endstop_pin', None))
+        stepper_config_name = config.get_name()
+        
+        if self.name == "stepper_z" and \
+           (stepper.get_name() == "stepper_z" or stepper.get_name() == "stepper_z1"):
+            endstop_pin_reverse = config.get('endstop_pin_reverse', None)
+            if endstop_pin_reverse:
+                ppins = self.printer.lookup_object('pins')
+                pin_params = ppins.parse_pin(endstop_pin_reverse, True, True)
+                pin_name_rev = "%s:%s" % (pin_params['chip_name'], pin_params['pin'])
+                endstop_rev_data = self.endstop_map_reverse.get(pin_name_rev)
+                stepper_short_name = stepper.get_name(short=True)
+                if endstop_rev_data is None:
+                    mcu_endstop_reverse = ppins.setup_pin('endstop', endstop_pin_reverse)
+                    self.endstop_map_reverse[pin_name_rev] = {
+                        'endstop': mcu_endstop_reverse,
+                        'invert': pin_params['invert'],
+                        'pullup': pin_params['pullup']}
+                    self.endstops_reverse.append((mcu_endstop_reverse, stepper_short_name))
+                else:
+                    mcu_endstop_reverse = endstop_rev_data['endstop']
+                    if (pin_params['invert'] != endstop_rev_data['invert'] or
+                        pin_params['pullup'] != endstop_rev_data['pullup']):
+                        raise self.printer.config_error(
+                            "Stepper %s shared reverse endstop pin %s "
+                            "must specify the same pullup/invert settings"
+                            % (stepper.get_name(), pin_name_rev))
+                mcu_endstop_reverse.add_stepper(stepper)
+
+        # Add stepper to normal endstop system
+        self.add_stepper(stepper, config.get('endstop_pin', None),
+                         endstop_name=stepper_config_name)
+
+    def handle_ready(self):
+        # This method is called if reverse homing is configured for this rail
+        self.gcode.register_command("REVERSE_HOMING", self.cmd_REVERSE_HOMING)
+
+    def homing_params_switch(self):
+        self.reversed = not self.reversed
+        self.endstop_map, self.endstop_map_reverse = self.endstop_map_reverse, self.endstop_map
+        self.endstops, self.endstops_reverse = self.endstops_reverse, self.endstops
+        self.position_endstop, self.position_endstop_reverse = self.position_endstop_reverse, self.position_endstop
+        self.homing_positive_dir, self.homing_positive_dir_reverse = self.homing_positive_dir_reverse, self.homing_positive_dir
+        self.homing_retract_dist, self.homing_retract_dist_reverse = self.homing_retract_dist_reverse, self.homing_retract_dist
+        self.homing_speed, self.homing_speed_reverse = self.homing_speed_reverse, self.homing_speed
+    def cmd_REVERSE_HOMING(self, gcmd):
+        self.homing_params_switch()
+        try:
+            homing_state = Homing(self.printer)
+            homing_state.set_axes([2])
+            kin = self.printer.lookup_object('toolhead').get_kinematics()
+            kin.home(homing_state)
+        except self.printer.command_error:
+            if self.printer.is_shutdown():
+                raise self.printer.command_error(
+                    "Homing failed due to printer shutdown")
+            self.printer.lookup_object('stepper_enable').motor_off()
+            raise
+    def handle_reverse_home_rails_end(self, homing_state, rails):
+        if self.reversed:
+            self.homing_params_switch()
     def setup_itersolve(self, alloc_func, *params):
         for stepper in self.steppers:
             stepper.setup_itersolve(alloc_func, *params)
