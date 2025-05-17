@@ -301,12 +301,14 @@ class ToolHead:
     def cmd_SET_Z_VELOCITY_LIMIT(self, gcmd):
         kin = self.get_kinematics()
         value = gcmd.get_float('VALUE', None, above=0.)
-        gcmd.respond_info('Z velocity before change: ' + str(kin.max_z_velocity))
+        gcmd.respond_info('Z velocity before change: ' + 
+                          str(kin.max_z_velocity))
         if value:
             kin.max_z_velocity = value
         else:
             gcmd.respond_info("Value given is illegal")
-        gcmd.respond_info('Z velocity after change: ' + str(kin.max_z_velocity))
+        gcmd.respond_info('Z velocity after change: ' +
+                          str(kin.max_z_velocity))
         
     # Print time and flush tracking
     def _advance_flush_time(self, flush_time):

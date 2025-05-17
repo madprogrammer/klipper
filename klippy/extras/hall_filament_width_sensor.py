@@ -134,21 +134,6 @@ class HallFilamentWidthSensor:
                 if pending_position <= last_epos:
                     # Get first item in filament_array queue
                     item = self.filament_array.pop(0)
-                #     self.filament_width = item[1]
-                # else:
-                #     if ((self.use_current_dia_while_delay)
-                #         and (self.firstExtruderUpdatePosition
-                #              == pending_position)):
-                #         self.filament_width = self.diameter
-                #     elif  self.firstExtruderUpdatePosition == pending_position:
-                #         self.filament_width = self.nominal_filament_dia
-                # if ((self.filament_width <= self.max_diameter)
-                #     and (self.filament_width >= self.min_diameter)):
-                #     percentage = round(self.nominal_filament_dia**2
-                #                        / self.filament_width**2 * 100)
-                    # self.gcode.run_script("M221 S" + str(percentage))
-                # else:
-                    # self.gcode.run_script("M221 S100")
         else:
             # self.gcode.run_script("M221 S100")
             self.filament_array = []

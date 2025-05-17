@@ -287,7 +287,8 @@ class VirtualSD:
             self.next_file_position = next_file_position
             try:
                 self.lines += 1
-                if self.lines % self.save_every_n_lines == 0 and self.plr_enabled:
+                if self.lines % self.save_every_n_lines == 0 and \
+                        self.plr_enabled:
                     plr_file.seek(0)
                     plr_file.write(str(self.lines))
                     plr_file.truncate()
@@ -329,3 +330,4 @@ class VirtualSD:
 
 def load_config(config):
     return VirtualSD(config)
+

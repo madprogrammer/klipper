@@ -3,7 +3,7 @@
 import logging
 from . import probe
 
-# Makerbase Endstop wrapper 
+# Makerbase Endstop wrapper
 class MakerbaseProbeEndstopWrapper:
     def __init__(self, config):
         self.printer = config.get_printer()
@@ -88,9 +88,11 @@ class MakerBase:
                                     desc=self.cmd_MKS_PROBE_PIN_1_help)
         self.gcode.register_command('MKS_PROBE_PIN_2', self.cmd_MKS_PROBE_PIN_2,
                                     desc=self.cmd_MKS_PROBE_PIN_2_help)
-        self.gcode.register_command('QIDI_PROBE_PIN_1', self.cmd_MKS_PROBE_PIN_1,
+        self.gcode.register_command('QIDI_PROBE_PIN_1',
+                                    self.cmd_MKS_PROBE_PIN_1,
                                     desc=self.cmd_MKS_PROBE_PIN_1_help)
-        self.gcode.register_command('QIDI_PROBE_PIN_2', self.cmd_MKS_PROBE_PIN_2,
+        self.gcode.register_command('QIDI_PROBE_PIN_2',
+                                    self.cmd_MKS_PROBE_PIN_2,
                                     desc=self.cmd_MKS_PROBE_PIN_2_help)
         self.gcode.register_command('MKS_REMOVE', self.cmd_MKS_REMOVE,
                                     desc=self.cmd_MKS_REMOVE_help)
@@ -104,8 +106,10 @@ class MakerBase:
         self.probe.mcu_probe.home_start = self.endstop_wrapper.home_start
         self.probe.mcu_probe.home_wait = self.endstop_wrapper.home_wait
         self.probe.mcu_probe.query_endstop = self.endstop_wrapper.query_endstop
-        self.probe.mcu_probe.multi_probe_begin = self.endstop_wrapper.multi_probe_begin
-        self.probe.mcu_probe.multi_probe_end = self.endstop_wrapper.multi_probe_end
+        self.probe.mcu_probe.multi_probe_begin = \
+                self.endstop_wrapper.multi_probe_begin
+        self.probe.mcu_probe.multi_probe_end = \
+                self.endstop_wrapper.multi_probe_end
         # gcmd.respond_raw("%s" % (self.cmd_MKS_PROBE_PIN_2_help, ))
     cmd_MKS_REMOVE_help = 'MKS_REMOVE'
     def cmd_MKS_REMOVE(self, gcmd):
@@ -114,22 +118,33 @@ class MakerBase:
         self.printer.lookup_object('gcode').remove_command('QUERY_PROBE')
         self.printer.lookup_object('gcode').remove_command('PROBE_CALIBRATE')
         self.printer.lookup_object('gcode').remove_command('PROBE_ACCURACY')
-        self.printer.lookup_object('gcode').remove_command('Z_OFFSET_APPLY_PROBE')
+        self.printer.lookup_object('gcode').remove_command(
+                'Z_OFFSET_APPLY_PROBE')
         self.printer.lookup_object('gcode').remove_command('MKS_SHOW_Z_OFFSET')
         self.printer.lookup_object('pins').remove_chip('probe')
     cmd_MKS_PROBE_PIN_1_help = 'ENABLE_PROBE_PIN_1'
     def cmd_MKS_PROBE_PIN_1(self, gcmd):
-        self.probe.mcu_probe.probe_wrapper = self.probe.mcu_probe.probe_wrapper_2
+        self.probe.mcu_probe.probe_wrapper = \
+                self.probe.mcu_probe.probe_wrapper_2
         # Wrappers
-        self.probe.mcu_probe.get_mcu = self.probe.mcu_probe.probe_wrapper_2.get_mcu
-        self.probe.mcu_probe.add_stepper = self.probe.mcu_probe.probe_wrapper_2.add_stepper
-        self.probe.mcu_probe.get_steppers = self.probe.mcu_probe.probe_wrapper_2.get_steppers
-        self.probe.mcu_probe.home_start = self.probe.mcu_probe.probe_wrapper_2.home_start
-        self.probe.mcu_probe.home_wait = self.probe.mcu_probe.probe_wrapper_2.home_wait
-        self.probe.mcu_probe.query_endstop = self.probe.mcu_probe.probe_wrapper_2.query_endstop
-        self.probe.mcu_probe.multi_probe_begin = self.probe.mcu_probe.probe_wrapper_2.multi_probe_begin
-        self.probe.mcu_probe.multi_probe_end = self.probe.mcu_probe.probe_wrapper_2.multi_probe_end
+        self.probe.mcu_probe.get_mcu = \
+                self.probe.mcu_probe.probe_wrapper_2.get_mcu
+        self.probe.mcu_probe.add_stepper = \
+                self.probe.mcu_probe.probe_wrapper_2.add_stepper
+        self.probe.mcu_probe.get_steppers = \
+                self.probe.mcu_probe.probe_wrapper_2.get_steppers
+        self.probe.mcu_probe.home_start = \
+                self.probe.mcu_probe.probe_wrapper_2.home_start
+        self.probe.mcu_probe.home_wait = \
+                self.probe.mcu_probe.probe_wrapper_2.home_wait
+        self.probe.mcu_probe.query_endstop = \
+                self.probe.mcu_probe.probe_wrapper_2.query_endstop
+        self.probe.mcu_probe.multi_probe_begin = \
+                self.probe.mcu_probe.probe_wrapper_2.multi_probe_begin
+        self.probe.mcu_probe.multi_probe_end = \
+                self.probe.mcu_probe.probe_wrapper_2.multi_probe_end
         # gcmd.respond_raw("%s" % (self.cmd_MKS_PROBE_PIN_1_help, ))
 
 def load_config(config):
     return MakerBase(config)
+

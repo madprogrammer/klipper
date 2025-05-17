@@ -661,7 +661,7 @@ class BedMeshCalibrate:
     def cmd_SAVE_Z_OFFSET_TO_BED_MESH(self, gcmd):
         self.probed_z_offset = self.printer.lookup_object('probe').last_z_result
         self.apply_to_bed_mesh = gcmd.get('APPLY', True)
-    
+
     def probe_finalize(self, offsets, positions):
         z_offset = offsets[2]
         positions = [[round(p[0], 2), round(p[1], 2), p[2]]
@@ -1780,3 +1780,4 @@ class ProfileManager:
 
 def load_config(config):
     return BedMesh(config)
+

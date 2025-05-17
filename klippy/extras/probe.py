@@ -393,7 +393,8 @@ class ProbeSessionHelper:
             if max(z_positions)-min(z_positions) > params['samples_tolerance']:
                 if retries >= params['samples_tolerance_retries']:
                     # raise gcmd.error("Probe samples exceed samples_tolerance")
-                    toolhead.manual_move(probexy + [start_z], params['lift_speed'])
+                    toolhead.manual_move(probexy + [start_z],
+                                         params['lift_speed'])
                     commands = [
                             'Z_VIBRATE',
                             'G4 P500',
@@ -412,8 +413,12 @@ class ProbeSessionHelper:
                     probexy + [pos[2] + params['sample_retract_dist']],
                     params['lift_speed'])
                 if last_probe_failed:
-                    if self.param_helper.probe_count != 0 and self.param_helper.probe_count % self.param_helper.vibrate == 0:
-                        gcode.respond_info('Probe ' + str(self.param_helper.probe_count) + " times, start vibrating")
+                    if self.param_helper.probe_count != 0 and \
+                            self.param_helper.probe_count % \
+                            self.param_helper.vibrate == 0:
+                        gcode.respond_info(
+                                'Probe ' + str(self.param_helper.probe_count) +
+                                " times, start vibrating")
                         commands = [
                             'G91',
                             'G1 Z20 F300',
@@ -538,7 +543,9 @@ class ProbePointsHelper:
             probe_session.run_probe(gcmd)
             probe.param_helper.probe_count += 1
             gcode = self.printer.lookup_object('gcode')
-            if probe.param_helper.vibrate and probe.param_helper.probe_count % probe.param_helper.vibrate == 0:
+            if probe.param_helper.vibrate and \
+                    probe.param_helper.probe_count % \
+                    probe.param_helper.vibrate == 0:
                 commands = [
                     'G90',
                     'G1 Z'+ str(self.horizontal_move_z) + ' F300',

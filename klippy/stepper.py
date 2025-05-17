@@ -386,13 +386,20 @@ class GenericPrinterRail:
         if self.get_name() == "stepper_z":
             if config.get('endstop_pin_reverse', None):
                 self.reversed = False
-                self.position_endstop_reverse = config.getfloat("position_endstop_reverse")
-                self.homing_positive_dir_reverse = config.getboolean('homing_positive_dir_reverse')
-                self.homing_speed_reverse = config.getfloat('homing_speed_reverse', self.homing_speed, above=0.)
+                self.position_endstop_reverse = \
+                    config.getfloat("position_endstop_reverse")
+                self.homing_positive_dir_reverse = \
+                    config.getboolean('homing_positive_dir_reverse')
+                self.homing_speed_reverse = \
+                    config.getfloat('homing_speed_reverse', self.homing_speed,
+                                    above=0.)
                 self.homing_retract_dist_reverse = 0
                 self.gcode = self.printer.lookup_object('gcode')
-                self.printer.register_event_handler("klippy:ready", self.handle_ready)
-                self.printer.register_event_handler("homing:home_rails_end", self.handle_reverse_home_rails_end)
+                self.printer.register_event_handler("klippy:ready",
+                                                    self.handle_ready)
+                self.printer.register_event_handler(
+                        "homing:home_rails_end",
+                        self.handle_reverse_home_rails_end)
 
     def get_name(self, short=False):
         if short:
@@ -456,21 +463,25 @@ class GenericPrinterRail:
         stepper_config_name = config.get_name()
         
         if self.name == "stepper_z" and \
-           (stepper.get_name() == "stepper_z" or stepper.get_name() == "stepper_z1"):
+           (stepper.get_name() == "stepper_z" or
+            stepper.get_name() == "stepper_z1"):
             endstop_pin_reverse = config.get('endstop_pin_reverse', None)
             if endstop_pin_reverse:
                 ppins = self.printer.lookup_object('pins')
                 pin_params = ppins.parse_pin(endstop_pin_reverse, True, True)
-                pin_name_rev = "%s:%s" % (pin_params['chip_name'], pin_params['pin'])
+                pin_name_rev = "%s:%s" % \
+                    (pin_params['chip_name'], pin_params['pin'])
                 endstop_rev_data = self.endstop_map_reverse.get(pin_name_rev)
                 stepper_short_name = stepper.get_name(short=True)
                 if endstop_rev_data is None:
-                    mcu_endstop_reverse = ppins.setup_pin('endstop', endstop_pin_reverse)
+                    mcu_endstop_reverse = ppins.setup_pin('endstop',
+                                                          endstop_pin_reverse)
                     self.endstop_map_reverse[pin_name_rev] = {
                         'endstop': mcu_endstop_reverse,
                         'invert': pin_params['invert'],
                         'pullup': pin_params['pullup']}
-                    self.endstops_reverse.append((mcu_endstop_reverse, stepper_short_name))
+                    self.endstops_reverse.append((mcu_endstop_reverse,
+                                                  stepper_short_name))
                 else:
                     mcu_endstop_reverse = endstop_rev_data['endstop']
                     if (pin_params['invert'] != endstop_rev_data['invert'] or
@@ -491,12 +502,18 @@ class GenericPrinterRail:
 
     def homing_params_switch(self):
         self.reversed = not self.reversed
-        self.endstop_map, self.endstop_map_reverse = self.endstop_map_reverse, self.endstop_map
-        self.endstops, self.endstops_reverse = self.endstops_reverse, self.endstops
-        self.position_endstop, self.position_endstop_reverse = self.position_endstop_reverse, self.position_endstop
-        self.homing_positive_dir, self.homing_positive_dir_reverse = self.homing_positive_dir_reverse, self.homing_positive_dir
-        self.homing_retract_dist, self.homing_retract_dist_reverse = self.homing_retract_dist_reverse, self.homing_retract_dist
-        self.homing_speed, self.homing_speed_reverse = self.homing_speed_reverse, self.homing_speed
+        self.endstop_map, self.endstop_map_reverse = \
+            self.endstop_map_reverse, self.endstop_map
+        self.endstops, self.endstops_reverse = \
+            self.endstops_reverse, self.endstops
+        self.position_endstop, self.position_endstop_reverse = \
+            self.position_endstop_reverse, self.position_endstop
+        self.homing_positive_dir, self.homing_positive_dir_reverse = \
+            self.homing_positive_dir_reverse, self.homing_positive_dir
+        self.homing_retract_dist, self.homing_retract_dist_reverse = \
+            self.homing_retract_dist_reverse, self.homing_retract_dist
+        self.homing_speed, self.homing_speed_reverse = \
+            self.homing_speed_reverse, self.homing_speed
     def cmd_REVERSE_HOMING(self, gcmd):
         self.homing_params_switch()
         try:
@@ -544,3 +561,4 @@ def LookupMultiRail(config, need_position_minmax=True,
         rail.add_stepper_from_config(
                 config.getsection(config.get_name() + str(i)))
     return rail
+

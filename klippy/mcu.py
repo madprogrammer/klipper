@@ -628,8 +628,10 @@ class MCU:
                 heater = heater.heater
             last_temp = heater.last_temp
             last_time = heater.last_temp_time
-            if last_time != 0.0 and (last_temp < heater.min_temp or last_temp > heater.max_temp):
-                msg += ", {} temperature is {}, has out of range ({}, {})".format(name, last_temp, heater.min_temp, heater.max_temp)
+            if last_time != 0.0 and \
+                (last_temp < heater.min_temp or last_temp > heater.max_temp):
+                msg += ", {} temperature is {}, has out of range ({}, {})" \
+                .format(name, last_temp, heater.min_temp, heater.max_temp)
         else:
             msg += ", not find {}".format(name)
         return msg
@@ -651,7 +653,7 @@ class MCU:
         if clock is not None:
             self._shutdown_clock = self.clock32_to_clock64(clock)
         self._shutdown_msg = msg = params['static_string_id']
-        event_type = params['#name']        
+        event_type = params['#name']
 
         if "ADC out of range" in msg:
             heaters=self._printer.lookup_object("heaters")

@@ -28,7 +28,8 @@ class ChamberFan:
         reactor = self.printer.get_reactor()
         reactor.register_timer(self.callback, reactor.monotonic()+PIN_MIN_TIME)
         gcode = self.printer.lookup_object("gcode")
-        gcode.register_command("TOGGLE_CHAMBER_FAN", self.cmd_toggle_chamber_fan)
+        gcode.register_command("TOGGLE_CHAMBER_FAN",
+                               self.cmd_toggle_chamber_fan)
     def cmd_toggle_chamber_fan(self, gcmd):
         self.fan_on = not self.fan_on
     def get_status(self, eventtime):
