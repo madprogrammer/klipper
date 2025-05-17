@@ -461,7 +461,7 @@ class GenericPrinterRail:
     def add_stepper_from_config(self, config):
         stepper = PrinterStepper(config, self.stepper_units_in_radians)
         stepper_config_name = config.get_name()
-        
+
         if self.name == "stepper_z" and \
            (stepper.get_name() == "stepper_z" or
             stepper.get_name() == "stepper_z1"):
@@ -561,4 +561,3 @@ def LookupMultiRail(config, need_position_minmax=True,
         rail.add_stepper_from_config(
                 config.getsection(config.get_name() + str(i)))
     return rail
-

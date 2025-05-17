@@ -1780,4 +1780,3 @@ class ProfileManager:
 
 def load_config(config):
     return BedMesh(config)
-

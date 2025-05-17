@@ -147,4 +147,3 @@ class MakerBase:
 
 def load_config(config):
     return MakerBase(config)
-

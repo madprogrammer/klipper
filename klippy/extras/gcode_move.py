@@ -290,7 +290,7 @@ class GCodeMove:
                           "gcode homing: %s"
                           % (mcu_pos, stepper_pos, kin_pos, toolhead_pos,
                              gcode_pos, base_pos, homing_pos))
-        
+
     def cmd_SAVE_ZOFFSET_TO_VARIABLE(self, gcmd):
         variables = self.printer.lookup_object("save_variables")
         gcode_move = self.printer.lookup_object("gcode_move")

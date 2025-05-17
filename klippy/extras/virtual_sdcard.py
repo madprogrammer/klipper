@@ -330,4 +330,3 @@ class VirtualSD:
 
 def load_config(config):
     return VirtualSD(config)
-
