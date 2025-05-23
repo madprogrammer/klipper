@@ -4,6 +4,7 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import os, sys, logging, io
+import tempfile
 
 VALID_GCODE_EXTS = ['gcode', 'g', 'gco']
 
@@ -246,7 +247,11 @@ class VirtualSD:
             file_path = "/home/mks/scripts/plr/plr_record"
             if os.path.exists(file_path):
                 os.remove(file_path)
-            plr_file = open(file_path, 'w', buffering=1)
+            if os.path.exists(os.path.dirname(file_path)):
+                plr_file = open(file_path, 'w', buffering=1)
+            else:
+                plr_file = tempfile.TemporaryFile('w', buffering=1)
+
         while not self.must_pause_work:
             if not lines:
                 # Read more data
