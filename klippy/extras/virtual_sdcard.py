@@ -250,7 +250,7 @@ class VirtualSD:
             if os.path.exists(os.path.dirname(file_path)):
                 plr_file = open(file_path, 'w', buffering=1)
             else:
-                plr_file = tempfile.TemporaryFile('w', buffering=1)
+                plr_file = tempfile.TemporaryFile()
 
         while not self.must_pause_work:
             if not lines:
